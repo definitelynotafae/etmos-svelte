@@ -1,11 +1,16 @@
 import { defineConfig } from 'drizzle-kit';
+import 'dotenv/config'; // Ensures Drizzle CLI can read your .env file
 
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not set');
 
 export default defineConfig({
-	schema: './src/lib/server/db/schema.ts',
-	dialect: 'sqlite',
-	dbCredentials: { url: process.env.DATABASE_URL },
-	verbose: true,
-	strict: true
+    schema: './src/lib/server/db/schema.ts',
+    out: './drizzle', // Good practice to specify where migrations go
+    dialect: 'turso', 
+    dbCredentials: { 
+        url: process.env.DATABASE_URL,
+        authToken: process.env.DATABASE_TOKEN 
+    },
+    verbose: true,
+    strict: true
 });
