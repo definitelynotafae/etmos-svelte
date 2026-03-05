@@ -1,6 +1,7 @@
+import { relations } from 'drizzle-orm';
 import { integer, sqliteTable, text, primaryKey } from 'drizzle-orm/sqlite-core';
 export * from './auth.schema';
-import { user } from './auth.schema';
+import { user, session, account } from './auth.schema';
 
 export const campanha = sqliteTable('campanha', {
 	id: text('id')
@@ -83,6 +84,7 @@ export const personagem = sqliteTable('personagem', {
 		.primaryKey()
 		.$defaultFn(() => crypto.randomUUID()),
 	user_id: text('user_id').references(() => user.id), // 1 -> N com User
+	campanhaId: text('campanha_id').references(() => campanha.id), // 1 -> N com Campanha
 	imagem: text('image_path'),
 	nome: text('nome').notNull(),
 	anoEscolar: integer('ano_escolar'),
@@ -186,3 +188,167 @@ export const personagemItens = sqliteTable(
 	},
 	(t) => [primaryKey({ columns: [t.personagemId, t.itemId] })]
 );
+
+// ============================================
+// RELATIONS
+// ============================================
+
+// User Relations (incluindo auth + game tables)
+export const userRelations = relations(user, ({ many }) => ({
+	sessions: many(session),
+	accounts: many(account),
+	campanhasCriadas: many(campanha),
+	personagens: many(personagem),
+	campanhasComoJogador: many(userCampanhas)
+}));
+
+// Campanha Relations
+export const campanhaRelations = relations(campanha, ({ one, many }) => ({
+	criador: one(user, {
+		fields: [campanha.criadorId],
+		references: [user.id]
+	}),
+	mapas: many(mapa),
+	imagens: many(imagensCampanha),
+	npcs: many(npcCampanhas),
+	jogadores: many(userCampanhas),
+	personagens: many(personagem)
+}));
+
+// Mapa Relations
+export const mapaRelations = relations(mapa, ({ one, many }) => ({
+	campanha: one(campanha, {
+		fields: [mapa.campanhaId],
+		references: [campanha.id]
+	}),
+	lugares: many(lugaresMapa)
+}));
+
+// LugaresMapa Relations
+export const lugaresMapaRelations = relations(lugaresMapa, ({ one }) => ({
+	mapa: one(mapa, {
+		fields: [lugaresMapa.mapaId],
+		references: [mapa.id]
+	})
+}));
+
+// ImagensCampanha Relations
+export const imagensCampanhaRelations = relations(imagensCampanha, ({ one }) => ({
+	campanha: one(campanha, {
+		fields: [imagensCampanha.campanhaId],
+		references: [campanha.id]
+	})
+}));
+
+// Origem Relations
+export const origemRelations = relations(origem, ({ many }) => ({
+	personagens: many(personagemOrigens)
+}));
+
+// Habilidade Relations
+export const habilidadeRelations = relations(habilidade, ({ many }) => ({
+	personagens: many(personagemHabilidades)
+}));
+
+// Particula Relations
+export const particulaRelations = relations(particula, ({ many }) => ({
+	personagens: many(personagemParticulas)
+}));
+
+// Item Relations
+export const itemRelations = relations(item, ({ many }) => ({
+	personagens: many(personagemItens)
+}));
+
+// Personagem Relations
+export const personagemRelations = relations(personagem, ({ one, many }) => ({
+	user: one(user, {
+		fields: [personagem.user_id],
+		references: [user.id]
+	}),
+	campanha: one(campanha, {
+		fields: [personagem.campanhaId],
+		references: [campanha.id]
+	}),
+	habilidades: many(personagemHabilidades),
+	origens: many(personagemOrigens),
+	particulas: many(personagemParticulas),
+	itens: many(personagemItens),
+	campanhasComoNpc: many(npcCampanhas)
+}));
+
+// ============================================
+// JUNCTION TABLE RELATIONS
+// ============================================
+
+// PersonagemHabilidades Relations (Many-to-Many)
+export const personagemHabilidadesRelations = relations(personagemHabilidades, ({ one }) => ({
+	personagem: one(personagem, {
+		fields: [personagemHabilidades.personagemId],
+		references: [personagem.id]
+	}),
+	habilidade: one(habilidade, {
+		fields: [personagemHabilidades.habilidadeId],
+		references: [habilidade.id]
+	})
+}));
+
+// PersonagemOrigens Relations (Many-to-Many)
+export const personagemOrigensRelations = relations(personagemOrigens, ({ one }) => ({
+	personagem: one(personagem, {
+		fields: [personagemOrigens.personagemId],
+		references: [personagem.id]
+	}),
+	origem: one(origem, {
+		fields: [personagemOrigens.origemId],
+		references: [origem.id]
+	})
+}));
+
+// NpcCampanhas Relations (Many-to-Many)
+export const npcCampanhasRelations = relations(npcCampanhas, ({ one }) => ({
+	npc: one(personagem, {
+		fields: [npcCampanhas.npcId],
+		references: [personagem.id]
+	}),
+	campanha: one(campanha, {
+		fields: [npcCampanhas.campanhaId],
+		references: [campanha.id]
+	})
+}));
+
+// UserCampanhas Relations (Many-to-Many)
+export const userCampanhasRelations = relations(userCampanhas, ({ one }) => ({
+	user: one(user, {
+		fields: [userCampanhas.userId],
+		references: [user.id]
+	}),
+	campanha: one(campanha, {
+		fields: [userCampanhas.campanhaId],
+		references: [campanha.id]
+	})
+}));
+
+// PersonagemParticulas Relations (Many-to-Many)
+export const personagemParticulasRelations = relations(personagemParticulas, ({ one }) => ({
+	personagem: one(personagem, {
+		fields: [personagemParticulas.personagemId],
+		references: [personagem.id]
+	}),
+	particula: one(particula, {
+		fields: [personagemParticulas.particulaId],
+		references: [particula.id]
+	})
+}));
+
+// PersonagemItens Relations (Many-to-Many)
+export const personagemItensRelations = relations(personagemItens, ({ one }) => ({
+	personagem: one(personagem, {
+		fields: [personagemItens.personagemId],
+		references: [personagem.id]
+	}),
+	item: one(item, {
+		fields: [personagemItens.itemId],
+		references: [item.id]
+	})
+}));
